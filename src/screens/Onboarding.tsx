@@ -1,15 +1,17 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView} from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import {useConsentStore} from '../state/useConsentStore';
 import {generateDeviceKey} from '../crypto';
 import {connectWallet} from '../lib/walletconnect';
+import {createWallet} from '../lib/wallet';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
 
 export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => {
-  const [step, setStep] = useState<'device' | 'wallet' | 'biometric' | 'handle'>('device');
+  const [step, setStep] = useState<'device' | 'wallet' | 'biometric' | 'handle' | 'showMnemonic'>('device');
   const [loading, setLoading] = useState(false);
   const [handleInput, setHandleInput] = useState('');
+  const [mnemonic, setMnemonic] = useState<string>('');
   const {setDeviceKey, setWallet, setProfile, profile} = useConsentStore();
 
   useEffect(() => {
@@ -65,22 +67,69 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
     }
   };
 
-  const handleSetupBiometric = async () => {
-    // For MVP, just enable FaceID via Keychain
-    // The Secure Enclave keys already require biometric
+  const handleCreateWallet = async () => {
+    setLoading(true);
     try {
+      const {address, mnemonic: newMnemonic} = await createWallet();
+      setMnemonic(newMnemonic);
+      setWallet({
+        address,
+        chainId: '84532', // Base Sepolia
+        connected: true,
+      });
+      setStep('showMnemonic');
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to create wallet: ${error?.message || error}`);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMnemonicConfirmed = () => {
+    // Clear mnemonic from memory and proceed
+    setMnemonic('');
+    setStep('biometric');
+  };
+
+  const handleSetupBiometric = async () => {
+    // Set up FaceID for vault access
+    try {
+      // Initialize vault with biometric protection
+      await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
+        service: 'echoid-vault',
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+      
+      // Also store biometric enabled flag
       await Keychain.setGenericPassword('biometric-enabled', 'true', {
         accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
       });
+      
       // Skip handle step if already set, otherwise go to handle creation
       if (profile?.handle) {
         onComplete();
       } else {
         setStep('handle');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to setup biometric');
-      console.error(error);
+    } catch (error: any) {
+      // If biometric is not available or user cancels, store without access control
+      if (error.message?.includes('BiometryNotAvailable')) {
+        Alert.alert('FaceID Not Available', 'FaceID is not available on this device. Vault will be accessible without biometric protection.');
+        await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
+          service: 'echoid-vault',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        if (profile?.handle) {
+          onComplete();
+        } else {
+          setStep('handle');
+        }
+      } else {
+        Alert.alert('Error', `Failed to setup biometric: ${error.message || 'Unknown error'}`);
+        console.error(error);
+      }
     }
   };
 
@@ -116,22 +165,59 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
 
       {step === 'wallet' && (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>Step 2: Connect Wallet</Text>
+          <Text style={styles.stepTitle}>Step 2: Setup Wallet</Text>
           <Text style={styles.stepDescription}>
-            Connect your wallet (Rainbow, MetaMask, etc.) to mint consent NFTs and sign
+            Connect an existing wallet or create a new one to mint consent NFTs and sign
             transactions.
           </Text>
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, loading && styles.buttonDisabled, {marginBottom: spacing.md}]}
             onPress={handleConnectWallet}
             disabled={loading}>
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.buttonText}>Connect Wallet</Text>
+              <Text style={styles.buttonText}>Connect Existing Wallet</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton, loading && styles.buttonDisabled]}
+            onPress={handleCreateWallet}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={colors.textSecondary} />
+            ) : (
+              <Text style={styles.secondaryButtonText}>Create New Wallet</Text>
             )}
           </TouchableOpacity>
         </View>
+      )}
+
+      {step === 'showMnemonic' && (
+        <ScrollView style={styles.stepContainer}>
+          <Text style={styles.stepTitle}>Step 2: Save Your Recovery Phrase</Text>
+          <Text style={styles.stepDescription}>
+            Write down these 12 words in order. Keep them safe and never share them. You'll need
+            this to recover your wallet.
+          </Text>
+          <View style={styles.mnemonicContainer}>
+            {mnemonic.split(' ').map((word, index) => (
+              <View key={index} style={styles.mnemonicWord}>
+                <Text style={styles.mnemonicIndex}>{index + 1}</Text>
+                <Text style={styles.mnemonicText}>{word}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.warningText}>
+            ⚠️ Store this phrase securely. Anyone with access can control your wallet.
+          </Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleMnemonicConfirmed}
+            disabled={loading}>
+            <Text style={styles.buttonText}>I've Saved It</Text>
+          </TouchableOpacity>
+        </ScrollView>
       )}
 
       {step === 'biometric' && (
@@ -247,5 +333,43 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     ...typography.bodyBold,
     color: colors.textSecondary,
+  },
+  mnemonicContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+  },
+  mnemonicWord: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    marginBottom: spacing.sm,
+    padding: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.sm,
+  },
+  mnemonicIndex: {
+    ...typography.small,
+    color: colors.textSecondary,
+    marginRight: spacing.xs,
+    minWidth: 20,
+  },
+  mnemonicText: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+  },
+  warningText: {
+    ...typography.caption,
+    color: colors.warning,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: `${colors.warning}15`,
+    borderRadius: borderRadius.sm,
   },
 });

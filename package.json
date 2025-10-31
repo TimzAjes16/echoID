@@ -5,8 +5,11 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "ios:fast": "./scripts/fast-build.sh",
+    "ios:clean": "./scripts/fast-build.sh --clean",
     "lint": "eslint .",
     "start": "react-native start",
+    "start:cache": "react-native start --reset-cache",
     "test": "jest"
   },
   "dependencies": {
@@ -41,6 +44,7 @@
     "react-native-screens": "^4.18.0",
     "react-native-svg": "^15.2.0",
     "react-native-vision-camera": "^4.1.0",
+    "text-encoding-polyfill": "^0.6.7",
     "uuid": "^9.0.1",
     "viem": "^2.21.45",
     "zod": "^3.23.8",

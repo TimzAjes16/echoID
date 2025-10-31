@@ -4,13 +4,17 @@ import CryptoKit
 import React
 
 @objc(SecureEnclaveModule)
-class SecureEnclaveModule: NSObject {
+class SecureEnclaveModule: NSObject, RCTBridgeModule {
+  
+  static func moduleName() -> String {
+    return "SecureEnclaveModule"
+  }
   
   // MARK: - Key Generation
   
   @objc(generateKeyPair:resolver:rejecter:)
   func generateKeyPair(_ label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.global(qos: .userInitiated).async(execute: {
+    DispatchQueue.global(qos: .userInitiated).async {
       do {
         // Generate P-256 key in Secure Enclave
         let accessControl = SecAccessControlCreateWithFlags(
@@ -60,7 +64,7 @@ class SecureEnclaveModule: NSObject {
   
   @objc(sign:withLabel:resolver:rejecter:)
   func sign(_ dataBase64: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.global(qos: .userInitiated).async(execute: {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let data = Data(base64Encoded: dataBase64) else {
         rejecter("INVALID_INPUT", "Invalid base64 data", nil)
         return
@@ -103,7 +107,7 @@ class SecureEnclaveModule: NSObject {
   
   @objc(wrapKey:recipientPubKey:withLabel:resolver:rejecter:)
   func wrapKey(_ symKeyBase64: String, recipientPubKey: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.global(qos: .userInitiated).async(execute: {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let symKeyData = Data(base64Encoded: symKeyBase64) else {
         rejecter("INVALID_INPUT", "Invalid symmetric key", nil)
         return
@@ -174,7 +178,7 @@ class SecureEnclaveModule: NSObject {
   
   @objc(unwrapKey:nonce:tag:senderPubKey:withLabel:resolver:rejecter:)
   func unwrapKey(_ ciphertextBase64: String, nonce: String, tag: String, senderPubKey: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.global(qos: .userInitiated).async(execute: {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let ciphertext = Data(base64Encoded: ciphertextBase64),
             let nonceData = Data(base64Encoded: nonce),
             let tagData = Data(base64Encoded: tag),

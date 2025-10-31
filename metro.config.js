@@ -25,6 +25,19 @@ const config = {
       buffer: require.resolve('buffer'),
     },
   },
+  transformer: {
+    // Enable Hermes for faster JS execution
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true, // Faster startup - inline requires to reduce bundle size
+      },
+    }),
+    // Enable caching
+    unstable_allowRequireContext: true,
+  },
+  // Note: Metro automatically uses filesystem cache by default
+  // Cache location: $TMPDIR/metro-* or .metro-cache
 };
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

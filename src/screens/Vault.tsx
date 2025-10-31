@@ -24,43 +24,71 @@ export const Vault: React.FC<{
 
   const checkVaultAccess = async () => {
     try {
-      // Check if biometric is enabled
-      const credentials = await Keychain.getGenericPassword({
-        service: 'echoid-vault',
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      });
-
-      if (credentials) {
+      // Try to unlock with biometric
+      await unlockVault();
+    } catch (error: any) {
+      console.error('Vault access error:', error);
+      // If vault doesn't exist yet, initialize it
+      if (error.message?.includes('not found') || error.code === 'NotFound') {
+        await initializeVault();
         setUnlocked(true);
+      } else if (error.message?.includes('UserCancel') || error.message?.includes('UserFallback')) {
+        // User cancelled or failed authentication - keep locked
+        Alert.alert('Authentication Required', 'FaceID is required to unlock the vault. Please try again.');
       } else {
-        // Try to unlock with biometric
-        await unlockVault();
+        // Other errors - for MVP, allow access
+        console.warn('Vault unlock error, allowing access:', error);
+        setUnlocked(true);
       }
-    } catch (error) {
-      // Vault not set up or biometric failed
-      setUnlocked(true); // For MVP, allow access
     } finally {
       setLoading(false);
     }
   };
 
-  const unlockVault = async () => {
+  const initializeVault = async () => {
     try {
-      const credentials = await Keychain.getGenericPassword({
+      // Store vault unlock key with biometric protection
+      await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
         service: 'echoid-vault',
         accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+    } catch (error: any) {
+      console.error('Failed to initialize vault with biometric:', error);
+      // If biometric is not available, store without access control
+      try {
+        await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
+          service: 'echoid-vault',
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+      } catch (fallbackError) {
+        console.error('Failed to initialize vault:', fallbackError);
+      }
+    }
+  };
+
+  const unlockVault = async () => {
+    try {
+      // Attempt to retrieve with biometric prompt
+      const credentials = await Keychain.getGenericPassword({
+        service: 'echoid-vault',
         authenticationPrompt: {
           title: 'Unlock Vault',
           subtitle: 'Use FaceID to access your consent vault',
+          description: 'Authenticate to view your consents',
         },
       });
 
       if (credentials) {
         setUnlocked(true);
+      } else {
+        // No credentials found, initialize vault
+        await initializeVault();
+        setUnlocked(true);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to unlock vault');
-      console.error(error);
+    } catch (error: any) {
+      // Re-throw to be handled by checkVaultAccess
+      throw error;
     }
   };
 
@@ -79,11 +107,20 @@ export const Vault: React.FC<{
   if (!unlocked) {
     return (
       <View style={styles.container}>
-        <Text style={styles.lockTitle}>Vault Locked</Text>
-        <Text style={styles.lockSubtitle}>Use FaceID to unlock your consent vault</Text>
-        <TouchableOpacity style={styles.unlockButton} onPress={unlockVault}>
-          <Text style={styles.unlockButtonText}>Unlock with FaceID</Text>
-        </TouchableOpacity>
+        <View style={styles.lockContainer}>
+          <Text style={styles.lockTitle}>Vault Locked</Text>
+          <Text style={styles.lockSubtitle}>Use FaceID to unlock your consent vault</Text>
+          <TouchableOpacity 
+            style={[styles.unlockButton, loading && styles.buttonDisabled]} 
+            onPress={unlockVault}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={colors.surface} />
+            ) : (
+              <Text style={styles.unlockButtonText}>Unlock with FaceID</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -231,5 +268,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '300',
     lineHeight: 32,
+  },
+  lockContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xxl,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
