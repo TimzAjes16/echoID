@@ -142,7 +142,26 @@ export const Auth: React.FC<AuthProps> = ({onAuthComplete}) => {
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Authentication failed');
+      console.error('Auth error:', error);
+      const errorMessage = error?.message || 'Authentication failed';
+      Alert.alert(
+        'Error',
+        errorMessage,
+        [
+          {text: 'OK'},
+          ...(errorMessage.includes('wallet') || errorMessage.includes('crypto')
+            ? [
+                {
+                  text: 'Retry',
+                  onPress: () => {
+                    // Retry after a short delay
+                    setTimeout(() => handleSubmit(), 500);
+                  },
+                },
+              ]
+            : []),
+        ],
+      );
     } finally {
       setLoading(false);
     }

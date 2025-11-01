@@ -119,11 +119,59 @@ export async function signUp(username: string, email?: string): Promise<{
       throw new Error('Invalid email format');
     }
 
-    // Generate device key
-    const deviceKey = await generateDeviceKey('echoid-device');
+    // Generate device key (with error handling and fallback)
+    let deviceKey;
+    try {
+      deviceKey = await generateDeviceKey('echoid-device');
+      console.log('✅ Device key generated:', deviceKey.publicKey.slice(0, 20) + '...');
+      
+      // Store device key in Keychain for onboarding detection
+      try {
+        const Keychain = await import('react-native-keychain');
+        await Keychain.default.setGenericPassword('device-key', deviceKey.publicKey, {
+          service: 'echoid-device',
+        });
+        console.log('✅ Device key stored in Keychain');
+      } catch (keychainError: any) {
+        console.warn('Failed to store device key in Keychain (non-critical):', keychainError);
+        // Continue anyway - device key is in memory and will be stored later
+      }
+    } catch (error: any) {
+      console.error('Device key generation error:', error);
+      // If device key generation fails (e.g., on simulator), create mock key
+      if (error?.message?.includes('Secure Enclave') || error?.message?.includes('simulator')) {
+        console.log('⚠️ Using mock device key for development');
+        deviceKey = {
+          publicKey: Buffer.from(`mock-device-key-${Date.now()}`).toString('base64'),
+          label: 'echoid-device',
+        };
+        
+        // Store mock key in Keychain anyway
+        try {
+          const Keychain = await import('react-native-keychain');
+          await Keychain.default.setGenericPassword('device-key', deviceKey.publicKey, {
+            service: 'echoid-device',
+          });
+        } catch (keychainError) {
+          // Non-critical
+        }
+      } else {
+        throw new Error(`Device key generation failed: ${error?.message || error}`);
+      }
+    }
 
-    // Create wallet
-    const wallet = await createWallet();
+    // Create wallet (with error handling)
+    let wallet;
+    try {
+      wallet = await createWallet();
+      console.log('✅ Wallet created:', wallet.address);
+      
+      // Wallet is already stored by createWallet(), but ensure it's accessible
+      // The storeWallet() function is called inside createWallet()
+    } catch (error: any) {
+      console.error('Wallet creation error:', error);
+      throw new Error(`Wallet creation failed: ${error?.message || error}. Please try again.`);
+    }
 
     // Store user data
     const user: User = {
@@ -134,8 +182,14 @@ export async function signUp(username: string, email?: string): Promise<{
       deviceKeyPublic: deviceKey.publicKey,
     };
 
-    await EncryptedStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-    await EncryptedStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({username: user.username, loggedIn: true}));
+    try {
+      await EncryptedStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      await EncryptedStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({username: user.username, loggedIn: true}));
+      console.log('✅ User data stored');
+    } catch (storageError: any) {
+      console.error('Storage error:', storageError);
+      throw new Error(`Failed to store user data: ${storageError?.message || storageError}`);
+    }
     
     // Store username in index for quick lookup
     try {

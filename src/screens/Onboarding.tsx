@@ -21,16 +21,32 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   }, []);
 
   const checkOnboardingStatus = async () => {
-    // Check if device key exists
+    // Check if device key and wallet already exist (from signup)
     try {
-      const credentials = await Keychain.getGenericPassword({service: 'echoid-device'});
-      if (credentials) {
-        // Device key exists, check wallet
-        // For MVP, proceed to wallet connection
+      const deviceKey = await Keychain.getGenericPassword({service: 'echoid-device'});
+      const {getStoredWallet} = await import('../lib/wallet');
+      const wallet = await getStoredWallet();
+      
+      if (deviceKey && wallet) {
+        // Both device key and wallet exist from signup, skip to biometric setup
+        setDeviceKey({publicKey: deviceKey.password, label: 'echoid-device'});
+        setWallet({
+          address: wallet.address,
+          chainId: '84532', // Default
+          connected: true,
+        });
+        setStep('biometric');
+      } else if (deviceKey) {
+        // Device key exists but no wallet
+        setDeviceKey({publicKey: deviceKey.password, label: 'echoid-device'});
         setStep('wallet');
+      } else {
+        // Start from device key generation
+        setStep('device');
       }
     } catch (error) {
-      // No device key, start onboarding
+      // No device key, start onboarding from beginning
+      console.log('No existing device key, starting onboarding');
     }
   };
 
