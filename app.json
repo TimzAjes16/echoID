@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
+      "_comment_splash": "Create a 1242x2436 PNG splash at ./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#007AFF"
     },
