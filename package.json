@@ -14,6 +14,7 @@
     "@expo/metro-config": "^54.0.8",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-clipboard/clipboard": "^1.13.2",
+    "@react-native/js-polyfills": "^0.82.1",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/native-stack": "^6.9.26",
     "@shopify/flash-list": "^1.6.3",
