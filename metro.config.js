@@ -24,6 +24,9 @@ const config = {
       // Use buffer polyfill for React Native
       buffer: require.resolve('buffer'),
     },
+    // Support for ethereum-cryptography package
+    sourceExts: ['js', 'json', 'ts', 'tsx', 'jsx'],
+    assetExts: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
   },
   transformer: {
     // Enable Hermes for faster JS execution

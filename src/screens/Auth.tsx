@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {signUp, login, isUsernameAvailable, recoverUsername} from '../lib/auth';
-import {ActivityIndicator} from 'react-native';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
 
 interface AuthProps {

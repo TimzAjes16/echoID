@@ -27,6 +27,7 @@
     "abitype": "^0.9.10",
     "buffer": "^6.0.3",
     "dayjs": "^1.11.10",
+    "ethereum-cryptography": "3.2.0",
     "expo-crypto": "^13.0.1",
     "js-sha3": "^0.8.0",
     "react": "19.1.1",

@@ -9,7 +9,7 @@ import {signWithDeviceKey} from '../crypto';
 import {sha3_256} from 'js-sha3';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
 
-export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
+export const Profile: React.FC<{onBack: () => void; onSettingsPress?: () => void}> = ({onBack, onSettingsPress}) => {
   const {wallet, deviceKey, profile, setProfile} = useConsentStore();
   const [handle, setHandle] = useState(profile?.handle || '');
   const [inputHandle, setInputHandle] = useState('');
@@ -151,12 +151,21 @@ export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.walletSection}>
-              <Text style={styles.sectionTitle}>Wallet</Text>
-              <Text style={styles.walletAddress} numberOfLines={1} ellipsizeMode="middle">
-                {wallet.address}
-              </Text>
-            </View>
+                <View style={styles.walletSection}>
+                  <Text style={styles.sectionTitle}>Wallet</Text>
+                  <Text style={styles.walletAddress} numberOfLines={1} ellipsizeMode="middle">
+                    {wallet.address}
+                  </Text>
+                </View>
+
+                {onSettingsPress && (
+                  <TouchableOpacity
+                    style={styles.settingsButton}
+                    onPress={onSettingsPress}
+                    activeOpacity={0.7}>
+                    <Text style={styles.settingsButtonText}>⚙️ Settings</Text>
+                  </TouchableOpacity>
+                )}
           </>
         ) : (
           <>

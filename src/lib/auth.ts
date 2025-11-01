@@ -4,7 +4,7 @@
  */
 
 import EncryptedStorage from 'react-native-encrypted-storage';
-import {createWallet, getStoredWallet} from './wallet';
+import {createWallet} from './wallet';
 import {generateDeviceKey} from '../crypto';
 
 export interface User {

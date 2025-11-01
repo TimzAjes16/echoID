@@ -12,6 +12,7 @@ import {Vault} from './src/screens/Vault';
 import {NewConsentWizard} from './src/screens/NewConsentWizard';
 import {ConsentDetail} from './src/screens/ConsentDetail';
 import {Profile} from './src/screens/Profile';
+import {Settings} from './src/screens/Settings';
 import {useConsentStore} from './src/state/useConsentStore';
 import {fetchConfig} from './src/lib/config';
 import {parseDeepLink} from './src/lib/handles';
@@ -25,6 +26,7 @@ export type RootStackParamList = {
   NewConsent: undefined;
   ConsentDetail: {consentId: string};
   Profile: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -171,7 +173,15 @@ function App() {
                 </Stack.Screen>
                 <Stack.Screen name="Profile">
                   {({navigation}) => (
-                    <Profile onBack={() => navigation.goBack()} />
+                    <Profile 
+                      onBack={() => navigation.goBack()} 
+                      onSettingsPress={() => navigation.navigate('Settings')}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name="Settings">
+                  {({navigation}) => (
+                    <Settings onBack={() => navigation.goBack()} />
                   )}
                 </Stack.Screen>
               </>

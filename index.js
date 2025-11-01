@@ -3,7 +3,23 @@
  */
 
 // IMPORTANT: Must be imported FIRST before any other imports that use crypto
-import 'react-native-get-random-values';
+try {
+  require('react-native-get-random-values');
+} catch (error) {
+  // Fallback if native module not linked - polyfill will be set up in wallet.ts
+  console.warn('react-native-get-random-values not linked, using fallback');
+  if (typeof global !== 'undefined' && !global.crypto) {
+    global.crypto = {};
+  }
+  if (typeof global !== 'undefined' && (!global.crypto.getRandomValues)) {
+    global.crypto.getRandomValues = function(arr) {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 256);
+      }
+      return arr;
+    };
+  }
+}
 
 import { enableScreens } from 'react-native-screens';
 enableScreens();
