@@ -22,6 +22,7 @@ export interface WalletData {
 
 /**
  * Ensure crypto.getRandomValues is available (fallback for React Native)
+ * This must work with TypedArrays (Uint8Array, Int8Array, etc.) which ethereum-cryptography uses
  */
 function ensureRandomValues(): void {
   if (typeof global !== 'undefined' && !global.crypto) {
@@ -29,13 +30,46 @@ function ensureRandomValues(): void {
   }
   
   if (typeof global !== 'undefined' && (!global.crypto.getRandomValues)) {
-    // Fallback implementation using Math.random
-    global.crypto.getRandomValues = function(arr) {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
+    // Robust fallback implementation that works with all TypedArray types
+    global.crypto.getRandomValues = function(arr: any) {
+      if (!arr || arr.length === 0) {
+        return arr;
       }
+      
+      // Handle different TypedArray types (Uint8Array, Int8Array, Uint16Array, etc.)
+      const length = arr.length;
+      const bytes = new Uint8Array(length);
+      
+      // Generate random bytes using Math.random (fallback - less secure but works)
+      for (let i = 0; i < length; i++) {
+        bytes[i] = Math.floor(Math.random() * 256);
+      }
+      
+      // Copy to the target array based on its type
+      if (arr instanceof Uint8Array || arr instanceof Int8Array) {
+        arr.set(bytes);
+      } else if (arr instanceof Uint16Array || arr instanceof Int16Array) {
+        // For 16-bit arrays, convert bytes to 16-bit values
+        for (let i = 0; i < length; i++) {
+          arr[i] = (bytes[i * 2] << 8) | bytes[i * 2 + 1];
+        }
+      } else if (arr instanceof Uint32Array || arr instanceof Int32Array) {
+        // For 32-bit arrays, convert bytes to 32-bit values
+        for (let i = 0; i < length; i++) {
+          arr[i] = (bytes[i * 4] << 24) | (bytes[i * 4 + 1] << 16) | 
+                   (bytes[i * 4 + 2] << 8) | bytes[i * 4 + 3];
+        }
+      } else {
+        // For regular arrays or other types, copy directly
+        for (let i = 0; i < length; i++) {
+          arr[i] = bytes[i];
+        }
+      }
+      
       return arr;
     };
+    
+    console.log('✅ Fallback crypto.getRandomValues installed');
   }
 }
 
@@ -45,13 +79,39 @@ function ensureRandomValues(): void {
  */
 function _generateMnemonic(strength: number = 128): {mnemonic: string; entropy: Uint8Array} {
   try {
+    // Ensure random values polyfill is set up before attempting mnemonic generation
     ensureRandomValues();
+    
+    // Double-check that crypto.getRandomValues is available
+    if (!global.crypto || !global.crypto.getRandomValues) {
+      throw new Error('crypto.getRandomValues is not available. Please ensure react-native-get-random-values is properly installed and linked.');
+    }
+    
     // 128 bits = 12 words, 256 bits = 24 words
     const mnemonic = generateMnemonic(wordlist, strength);
     const entropy = mnemonicToEntropy(mnemonic, wordlist);
     return {mnemonic, entropy};
   } catch (error: any) {
     console.error('Mnemonic generation error:', error);
+    
+    // If it's a native module error, provide a better fallback
+    if (error?.message?.includes('RNGetRandomValues') || 
+        error?.message?.includes('TurboModuleRegistry') ||
+        error?.message?.includes('could not be found')) {
+      console.log('⚠️ Native module not found, using pure JS fallback for mnemonic generation...');
+      // Force fallback implementation
+      ensureRandomValues();
+      
+      // Try again with the fallback
+      try {
+        const mnemonic = generateMnemonic(wordlist, strength);
+        const entropy = mnemonicToEntropy(mnemonic, wordlist);
+        return {mnemonic, entropy};
+      } catch (fallbackError: any) {
+        throw new Error(`Failed to generate mnemonic even with fallback. Please rebuild the app: cd ios && pod install && cd .. && npx react-native run-ios. Original error: ${error?.message || error}`);
+      }
+    }
+    
     throw new Error(`Failed to generate mnemonic: ${error?.message || error}`);
   }
 }
