@@ -4,8 +4,8 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import {useConsentStore} from '../state/useConsentStore';
 import {generateDeviceKey} from '../crypto';
-import {connectWallet} from '../lib/walletconnect';
 import {createWallet} from '../lib/wallet';
+import {WalletConnectModal} from '../components/WalletConnectModal';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
 
 export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => {
@@ -65,19 +65,66 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
     }
   };
 
+  const [walletConnectUri, setWalletConnectUri] = useState<string | null>(null);
+  const [showWCModal, setShowWCModal] = useState(false);
+
   const handleConnectWallet = async () => {
     setLoading(true);
     try {
-      const {accounts, chainId} = await connectWallet();
+      // Import WalletConnectModal dynamically
+      const {WalletConnectModal} = await import('../components/WalletConnectModal');
+      
+      // We need to manually trigger the connection and show QR
+      // WalletConnect's connect() returns a promise that resolves with {uri, approval}
+      // We'll handle this manually to show the QR code
+      const {initWalletConnect} = await import('../lib/walletconnect');
+      const client = await initWalletConnect();
+      
+      const supportedChainIds = [42170, 84532, 1442]; // Arbitrum Nova, Base Sepolia, Polygon zkEVM
+      const chainList = supportedChainIds.map((id) => `eip155:${id}`);
+      
+      const {uri, approval} = await client.connect({
+        requiredNamespaces: {
+          eip155: {
+            methods: ['eth_sendTransaction', 'eth_signTypedData_v4', 'eth_chainId'],
+            chains: chainList,
+            events: ['chainChanged', 'accountsChanged'],
+          },
+        },
+      });
+      
+      // Show QR code modal
+      setWalletConnectUri(uri);
+      setShowWCModal(true);
+      
+      // Wait for approval (user scans QR and approves in wallet)
+      const session = await approval();
+      
+      // Close modal
+      setShowWCModal(false);
+      setWalletConnectUri(null);
+      
+      const accounts = session.namespaces.eip155?.accounts?.map(
+        acc => acc.split(':')[2],
+      ) || [];
+      
+      const chainId = session.namespaces.eip155?.chains?.[0]?.split(':')[1] || '84532';
+      
       setWallet({
         address: accounts[0],
         chainId,
         connected: true,
       });
       setStep('biometric');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to connect wallet');
-      console.error(error);
+    } catch (error: any) {
+      setShowWCModal(false);
+      setWalletConnectUri(null);
+      if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
+        Alert.alert('Connection Cancelled', 'Wallet connection was cancelled.');
+      } else {
+        Alert.alert('Error', `Failed to connect wallet: ${error?.message || 'Unknown error'}`);
+        console.error('WalletConnect error:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -277,8 +324,9 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
           </TouchableOpacity>
         </View>
       )}
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 };
 

@@ -51,8 +51,15 @@ export async function connectWallet(supportedChainIds: number[] = [42170, 84532,
   // Display URI as QR code or deep link
   // For mobile, use deep link: wc:${uri}
   // Approval will resolve when wallet approves
+  
+  console.log('🔗 WalletConnect URI generated:', uri);
+  console.log('📱 Deep link format: wc:' + uri);
+  
+  // In Expo Go, the QR code will be displayed by the calling component
+  // The URI can be opened as a deep link: wc:${uri}
 
   const session = await approval();
+  console.log('✅ WalletConnect session established:', session.topic);
 
   const accounts = session.namespaces.eip155?.accounts?.map(
     acc => acc.split(':')[2],
