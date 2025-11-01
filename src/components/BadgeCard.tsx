@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
 import dayjs from 'dayjs';
 import {Consent, CoercionLevel} from '../state/useConsentStore';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
@@ -43,22 +43,38 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({consent, onPress}) => {
   const minutesRemaining = Math.floor((remainingLock % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <View style={styles.header}>
-        <Text style={styles.purpose}>{consent.purpose}</Text>
-        <View style={[styles.statusBadge, {backgroundColor: getStatusColor(consent.status)}]}>
-          <Text style={styles.statusText}>{consent.status.toUpperCase()}</Text>
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={onPress}
+      activeOpacity={0.7}>
+      <View style={styles.cardContent}>
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.purpose} numberOfLines={2}>{consent.purpose}</Text>
+            <View style={[styles.statusBadge, {backgroundColor: getStatusColor(consent.status)}]}>
+              <Text style={styles.statusText}>{consent.status.replace('-', ' ').toUpperCase()}</Text>
+            </View>
+          </View>
         </View>
-      </View>
-      <Text style={styles.date}>{dayjs(consent.createdAt).format('MMM D, YYYY')}</Text>
-      {consent.status === 'locked' && remainingLock > 0 && (
-        <Text style={styles.lockTime}>
-          Locked for {hoursRemaining}h {minutesRemaining}m
-        </Text>
-      )}
-      <View style={styles.footer}>
-        <View style={[styles.riskDot, {backgroundColor: getCoercionColor(consent.coercionLevel)}]} />
-        <Text style={styles.riskLabel}>Risk: {consent.coercionLevel}</Text>
+        
+        <View style={styles.metaContainer}>
+          <Text style={styles.date}>{dayjs(consent.createdAt).format('MMM D, YYYY')}</Text>
+          {consent.status === 'locked' && remainingLock > 0 && (
+            <View style={styles.lockTimeContainer}>
+              <Text style={styles.lockIcon}>⏱</Text>
+              <Text style={styles.lockTime}>
+                {hoursRemaining}h {minutesRemaining}m
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.footer}>
+          <View style={styles.riskIndicator}>
+            <View style={[styles.riskDot, {backgroundColor: getCoercionColor(consent.coercionLevel)}]} />
+            <Text style={styles.riskLabel}>{consent.coercionLevel}</Text>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -67,61 +83,113 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({consent, onPress}) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    marginVertical: spacing.xs,
     marginHorizontal: spacing.md,
-    ...shadows.md,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  cardContent: {
+    padding: spacing.md + 4,
   },
   header: {
+    marginBottom: spacing.md,
+  },
+  titleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   purpose: {
     ...typography.h3,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
     flex: 1,
-    marginRight: spacing.sm,
+    lineHeight: 24,
   },
   statusBadge: {
-    paddingVertical: spacing.xs,
+    paddingVertical: 4,
     paddingHorizontal: spacing.sm,
     borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
   },
   statusText: {
     ...typography.smallBold,
+    fontSize: 10,
     color: colors.surface,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    fontWeight: '700',
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   date: {
     ...typography.caption,
+    fontSize: 13,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    fontWeight: '400',
+  },
+  lockTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: `${colors.warning}15`,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  lockIcon: {
+    fontSize: 12,
   },
   lockTime: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.warning,
-    fontWeight: '500',
-    marginBottom: spacing.xs,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     paddingTop: spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  riskIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   riskDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: spacing.xs,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+      },
+    }),
   },
   riskLabel: {
     ...typography.small,
+    fontSize: 12,
     color: colors.textSecondary,
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
 });

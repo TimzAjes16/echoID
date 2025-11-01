@@ -2,6 +2,9 @@
  * @format
  */
 
+// IMPORTANT: Must be imported FIRST before any other imports that use crypto
+import 'react-native-get-random-values';
+
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 

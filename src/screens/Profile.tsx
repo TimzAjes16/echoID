@@ -1,11 +1,13 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform} from 'react-native';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useConsentStore} from '../state/useConsentStore';
 import {QRCodeView} from '../components/QRCodeView';
 import {normalizeHandle, formatHandle, validateHandle, registerHandle, encodeQRInvite, generateDeepLink} from '../lib/handles';
 import {getConfig} from '../lib/config';
 import {signWithDeviceKey} from '../crypto';
 import {sha3_256} from 'js-sha3';
+import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
 
 export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
   const {wallet, deviceKey, profile, setProfile} = useConsentStore();
@@ -14,6 +16,7 @@ export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
   const [loading, setLoading] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const config = getConfig();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (profile?.handle) {
@@ -102,20 +105,29 @@ export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+    <SafeAreaView style={[styles.container, {paddingTop: Math.max(insets.top, spacing.md)}]} edges={['top']}>
+      <View style={[styles.header, {paddingTop: Math.max(insets.top, spacing.md)}]}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.headerSpacer} />
       </View>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, {paddingBottom: insets.bottom + spacing.xl}]}
+        showsVerticalScrollIndicator={false}>
+        
+        {/* Username Section */}
+        <View style={styles.usernameSection}>
+          <Text style={styles.usernameLabel}>Username</Text>
+          <Text style={styles.usernameValue}>@{profile?.username || 'Not set'}</Text>
+        </View>
 
-      <View style={styles.content}>
         {handle ? (
           <>
             <View style={styles.handleSection}>
-              <Text style={styles.handleLabel}>Your Handle</Text>
+              <Text style={styles.handleLabel}>EchoID Handle</Text>
               <Text style={styles.handleValue}>{formatHandle(handle)}</Text>
               {profile?.ensName && (
                 <Text style={styles.ensName}>ENS: {profile.ensName}</Text>
@@ -177,132 +189,240 @@ export const Profile: React.FC<{onBack: () => void}> = ({onBack}) => {
             </View>
           </>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   backButton: {
-    paddingRight: 16,
+    paddingRight: spacing.md,
+    paddingVertical: spacing.xs,
+    minWidth: 44,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
+    fontSize: 28,
+    color: colors.primary,
+    fontWeight: '400',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.h2,
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.5,
     flex: 1,
+    color: colors.text,
   },
   headerSpacer: {
     width: 60,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
-    padding: 20,
+    padding: spacing.lg,
+  },
+  usernameSection: {
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  usernameLabel: {
+    ...typography.caption,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    fontWeight: '500',
+  },
+  usernameValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: -0.5,
   },
   handleSection: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   handleLabel: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 8,
+    ...typography.caption,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    fontWeight: '500',
   },
   handleValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: -0.5,
   },
   ensName: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 8,
+    ...typography.caption,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
   },
   qrSection: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   sectionTitle: {
-    fontSize: 18,
+    ...typography.h3,
+    fontSize: 20,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
+    color: colors.text,
   },
   toggleButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
   },
   toggleButtonText: {
-    color: '#007AFF',
-    fontSize: 14,
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   walletSection: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   walletAddress: {
+    ...typography.body,
     fontSize: 14,
-    color: '#8E8E93',
-    fontFamily: 'monospace',
+    color: colors.textSecondary,
+    fontFamily: Platform.select({ios: 'Menlo', android: 'monospace'}),
+    letterSpacing: 0.5,
   },
   claimSection: {
-    backgroundColor: 'white',
-    padding: 24,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   claimTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 12,
+    ...typography.h2,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   claimDescription: {
+    ...typography.body,
     fontSize: 16,
-    color: '#8E8E93',
-    marginBottom: 24,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
     lineHeight: 24,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 8,
-    padding: 12,
+    ...typography.body,
     fontSize: 16,
-    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md + 4,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
   claimButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md + 4,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
+    minHeight: 50,
+    ...Platform.select({
+      ios: {
+        ...shadows.sm,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   claimButtonText: {
-    color: 'white',
-    fontSize: 18,
+    ...typography.bodyBold,
+    fontSize: 17,
     fontWeight: '600',
+    color: colors.surface,
   },
 });

@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator} from 'react-native';
+import {View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform} from 'react-native';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import * as Keychain from 'react-native-keychain';
 import {useConsentStore} from '../state/useConsentStore';
 import {BadgeCard} from '../components/BadgeCard';
@@ -17,6 +18,7 @@ export const Vault: React.FC<{
   const {consents, getUnlockEligibleConsents} = useConsentStore();
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     checkVaultAccess();
@@ -98,22 +100,28 @@ export const Vault: React.FC<{
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-      </View>
+      <SafeAreaView style={[styles.container, {paddingTop: insets.top}]} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!unlocked) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={[styles.container, {paddingTop: insets.top}]} edges={['top', 'bottom']}>
         <View style={styles.lockContainer}>
+          <View style={styles.lockIconContainer}>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </View>
           <Text style={styles.lockTitle}>Vault Locked</Text>
           <Text style={styles.lockSubtitle}>Use FaceID to unlock your consent vault</Text>
           <TouchableOpacity 
             style={[styles.unlockButton, loading && styles.buttonDisabled]} 
             onPress={unlockVault}
-            disabled={loading}>
+            disabled={loading}
+            activeOpacity={0.8}>
             {loading ? (
               <ActivityIndicator color={colors.surface} />
             ) : (
@@ -121,7 +129,7 @@ export const Vault: React.FC<{
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -129,40 +137,55 @@ export const Vault: React.FC<{
   const eligibleConsents = getUnlockEligibleConsents();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Consents</Text>
-        <View style={styles.headerRight}>
+    <SafeAreaView style={[styles.container, {paddingTop: insets.top}]} edges={['top']}>
+      {/* Modern Header with proper notch spacing */}
+      <View style={[styles.header, {paddingTop: Math.max(insets.top, spacing.md)}]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>My Consents</Text>
           {eligibleConsents.length > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{eligibleConsents.length} eligible</Text>
+              <Text style={styles.badgeText}>{eligibleConsents.length}</Text>
             </View>
           )}
-          <TouchableOpacity onPress={onProfilePress} style={styles.profileButton}>
-            <Text style={styles.profileButtonText}>Profile</Text>
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity 
+          onPress={onProfilePress} 
+          style={styles.profileButton}
+          activeOpacity={0.7}>
+          <Text style={styles.profileButtonText}>Profile</Text>
+        </TouchableOpacity>
       </View>
 
-      {sortedConsents.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No consents yet</Text>
-          <Text style={styles.emptySubtext}>Create your first consent to get started</Text>
-        </View>
-      ) : (
-        <FlashList
-          data={sortedConsents}
-          renderItem={renderConsent}
-          keyExtractor={(item) => item.id}
-          estimatedItemSize={120}
-          contentContainerStyle={styles.list}
-        />
-      )}
+      {/* Content Area */}
+      <View style={styles.content}>
+        {sortedConsents.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>📋</Text>
+            </View>
+            <Text style={styles.emptyText}>No consents yet</Text>
+            <Text style={styles.emptySubtext}>Create your first consent to get started</Text>
+          </View>
+        ) : (
+          <FlashList
+            data={sortedConsents}
+            renderItem={renderConsent}
+            keyExtractor={(item) => item.id}
+            estimatedItemSize={120}
+            contentContainerStyle={[styles.list, {paddingBottom: insets.bottom + spacing.xl}]}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
+      {/* Modern FAB with proper bottom spacing */}
+      <TouchableOpacity 
+        style={[styles.fab, {bottom: insets.bottom + spacing.md}]} 
+        onPress={onCreateNew}
+        activeOpacity={0.9}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -171,111 +194,195 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    paddingTop: spacing.lg,
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
   },
   title: {
     ...typography.h1,
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.5,
     color: colors.text,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
   },
   badge: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.full,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
   },
   badgeText: {
     ...typography.smallBold,
+    fontSize: 11,
     color: colors.surface,
   },
   profileButton: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   profileButtonText: {
     ...typography.bodyBold,
+    fontSize: 17,
     color: colors.primary,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
   },
   list: {
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    ...shadows.sm,
+  },
+  emptyIcon: {
+    fontSize: 40,
   },
   emptyText: {
     ...typography.h3,
-    marginBottom: spacing.sm,
-    color: colors.textSecondary,
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    color: colors.text,
+    textAlign: 'center',
   },
   emptySubtext: {
     ...typography.body,
+    fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-  },
-  lockTitle: {
-    ...typography.h2,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    color: colors.text,
-  },
-  lockSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  unlockButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.md,
-    alignSelf: 'center',
-    ...shadows.md,
-  },
-  unlockButtonText: {
-    ...typography.bodyBold,
-    color: colors.surface,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.lg,
-  },
-  fabText: {
-    color: colors.surface,
-    fontSize: 32,
-    fontWeight: '300',
-    lineHeight: 32,
+    lineHeight: 22,
   },
   lockContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+  },
+  lockIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    ...shadows.md,
+  },
+  lockIcon: {
+    fontSize: 48,
+  },
+  lockTitle: {
+    ...typography.h2,
+    fontSize: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    color: colors.text,
+  },
+  lockSubtitle: {
+    ...typography.body,
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 22,
+    paddingHorizontal: spacing.lg,
+  },
+  unlockButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl + 8,
+    borderRadius: borderRadius.lg,
+    minWidth: 200,
+    alignSelf: 'center',
+    ...shadows.md,
+  },
+  unlockButtonText: {
+    ...typography.bodyBold,
+    fontSize: 17,
+    color: colors.surface,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  fabText: {
+    color: colors.surface,
+    fontSize: 28,
+    fontWeight: '300',
+    lineHeight: 28,
+    marginTop: -2,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
 });

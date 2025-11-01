@@ -100,9 +100,26 @@ export const shadows = {
   lg: {
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+};
+
+// Modern iOS design tokens
+export const iosDesign = {
+  // Safe area padding for notch
+  notchTopPadding: 44, // Standard iOS notch height
+  notchBottomPadding: 34, // Home indicator height
+  
+  // Blur effects (for future use)
+  blurIntensity: 20,
+  
+  // Modern spacing scale
+  spacing: {
+    notch: 44,
+    header: 24,
+    section: 32,
   },
 };
 

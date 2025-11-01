@@ -6,6 +6,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import * as Keychain from 'react-native-keychain';
 
+import {Auth} from './src/screens/Auth';
 import {Onboarding} from './src/screens/Onboarding';
 import {Vault} from './src/screens/Vault';
 import {NewConsentWizard} from './src/screens/NewConsentWizard';
@@ -14,9 +15,11 @@ import {Profile} from './src/screens/Profile';
 import {useConsentStore} from './src/state/useConsentStore';
 import {fetchConfig} from './src/lib/config';
 import {parseDeepLink} from './src/lib/handles';
+import {isLoggedIn, getCurrentUser} from './src/lib/auth';
 import {Linking} from 'react-native';
 
 export type RootStackParamList = {
+  Auth: undefined;
   Onboarding: undefined;
   Vault: undefined;
   NewConsent: undefined;
@@ -28,8 +31,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isOnboarding, setIsOnboarding] = useState<boolean | null>(null);
-  const {setProtocolFee, setSelectedChain} = useConsentStore();
+  const {setProtocolFee, setSelectedChain, setWallet, setProfile} = useConsentStore();
 
   useEffect(() => {
     initializeApp();
@@ -68,17 +72,57 @@ function App() {
       setProtocolFee(config.protocolFeeWei);
       setSelectedChain(config.defaultChainId);
 
-      // Check if onboarding is complete
-      const deviceKey = await Keychain.getGenericPassword({service: 'echoid-device'});
-      setIsOnboarding(!deviceKey);
+      // Check authentication
+      try {
+        const loggedIn = await isLoggedIn();
+        setIsAuthenticated(loggedIn);
+
+        if (loggedIn) {
+          // Load user data
+          const user = await getCurrentUser();
+          if (user) {
+            setWallet({address: user.walletAddress, connected: true});
+            setProfile({
+              username: user.username,
+              qrPayload: '', // Will be generated in Profile screen
+            });
+
+            // Check if onboarding is complete
+            const deviceKey = await Keychain.getGenericPassword({service: 'echoid-device'});
+            setIsOnboarding(!deviceKey);
+          } else {
+            setIsAuthenticated(false);
+            setIsOnboarding(true);
+          }
+        } else {
+          setIsAuthenticated(false);
+          setIsOnboarding(false);
+        }
+      } catch (authError) {
+        // If auth check fails, assume not authenticated
+        console.warn('Auth check failed:', authError);
+        setIsAuthenticated(false);
+        setIsOnboarding(false);
+      }
     } catch (error) {
       console.error('App initialization error:', error);
-      setIsOnboarding(true);
+      setIsAuthenticated(false);
+      setIsOnboarding(false);
     }
   };
 
-  if (isOnboarding === null) {
-    return null; // Or show a loading screen
+  const handleAuthComplete = (username: string, walletAddress: string) => {
+    setWallet({address: walletAddress, connected: true});
+    setProfile({
+      username,
+      qrPayload: '', // Will be generated in Profile screen
+    });
+    setIsAuthenticated(true);
+    setIsOnboarding(true); // Proceed to onboarding after auth
+  };
+
+  if (isAuthenticated === null || isOnboarding === null) {
+    return null; // Show loading screen
   }
 
   return (
@@ -91,7 +135,11 @@ function App() {
               headerShown: false,
               contentStyle: {backgroundColor: '#F2F2F7'},
             }}>
-            {isOnboarding ? (
+            {!isAuthenticated ? (
+              <Stack.Screen name="Auth">
+                {() => <Auth onAuthComplete={handleAuthComplete} />}
+              </Stack.Screen>
+            ) : isOnboarding ? (
               <Stack.Screen name="Onboarding">
                 {() => <Onboarding onComplete={() => setIsOnboarding(false)} />}
               </Stack.Screen>

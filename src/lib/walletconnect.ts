@@ -28,8 +28,9 @@ export async function initWalletConnect(): Promise<SignClient> {
 
 /**
  * Connect to external wallet (supports multiple chains)
+ * Defaults to Arbitrum Nova (42170) for lower fees
  */
-export async function connectWallet(supportedChainIds: number[] = [84532]): Promise<{
+export async function connectWallet(supportedChainIds: number[] = [42170, 84532, 1442]): Promise<{
   accounts: string[];
   chainId: string;
 }> {
@@ -77,9 +78,20 @@ export async function sendTransaction(
     chainId?: string;
   },
 ): Promise<string> {
+  // Check test mode first
+  const {isTestMode, generateTestTxHash, simulateTxConfirmation} = await import('./testMode');
+  const testMode = await isTestMode();
+  
+  if (testMode) {
+    console.log('🧪 TEST MODE: Simulating transaction');
+    await simulateTxConfirmation();
+    return generateTestTxHash();
+  }
+
+  // Live mode: use WalletConnect
   const client = await initWalletConnect();
   if (!client.session) {
-    throw new Error('Wallet not connected');
+    throw new Error('Wallet not connected. Please connect your wallet first.');
   }
 
   const accounts = client.session.namespaces.eip155?.accounts?.map(

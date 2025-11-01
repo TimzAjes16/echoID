@@ -48,6 +48,11 @@ export const ParticipantInput: React.FC<ParticipantInputProps> = ({
   };
 
   const handleResolveHandle = async (normalizedHandle: string) => {
+    // Validate handle format first
+    if (!normalizedHandle || normalizedHandle.length < 3) {
+      Alert.alert('Error', 'Invalid handle format');
+      return;
+    }
     setLoading(true);
     try {
       const resolution = await resolveHandle(normalizedHandle, config.apiBaseUrl);

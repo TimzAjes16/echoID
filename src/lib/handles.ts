@@ -62,6 +62,23 @@ export async function resolveHandle(
   handle: string,
   apiBaseUrl: string,
 ): Promise<HandleResolution> {
+  // Check test mode - return test data if API unavailable
+  try {
+    const {isTestMode, generateTestWalletAddresses} = await import('./testMode');
+    const testMode = await isTestMode();
+    
+    if (testMode) {
+      console.log('🧪 TEST MODE: Resolving handle with test data');
+      const testWallets = generateTestWalletAddresses();
+      return {
+        wallet: testWallets.participantB,
+        devicePubKey: 'test-device-pub-key',
+        verified: true,
+      };
+    }
+  } catch {
+    // Continue with live resolution
+  }
   const normalized = normalizeHandle(handle);
   const response = await fetch(`${apiBaseUrl}/api/handles/${normalized}`, {
     method: 'GET',

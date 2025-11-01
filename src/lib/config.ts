@@ -7,12 +7,13 @@ export interface AppConfig {
   apiBaseUrl: string;
 }
 
-// Default config (Base Sepolia)
+// Default config - Using Arbitrum Nova for lower fees
+// Arbitrum Nova: ~$0.05-0.10 per transaction vs Base Sepolia ~$0.20-0.50
 const DEFAULT_CONFIG: AppConfig = {
   treasuryAddress: '0x0000000000000000000000000000000000000000', // Replace with actual treasury
-  protocolFeeWei: '50000000000000000', // 0.05 ETH (adjust for Base)
-  defaultChainId: 84532, // Base Sepolia
-  supportedChainIds: [84532], // Base Sepolia, can add Nova/zkEVM
+  protocolFeeWei: '10000000000000000', // 0.01 ETH (lower fee on Nova)
+  defaultChainId: 42170, // Arbitrum Nova (mainnet) - lower fees than Base
+  supportedChainIds: [42170, 84532, 1442], // Nova (default), Base Sepolia, Polygon zkEVM
   apiBaseUrl: 'https://api.echoid.app', // Replace with actual API
 };
 

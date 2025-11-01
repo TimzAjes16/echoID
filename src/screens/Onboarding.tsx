@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform} from 'react-native';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import * as Keychain from 'react-native-keychain';
 import {useConsentStore} from '../state/useConsentStore';
 import {generateDeviceKey} from '../crypto';
@@ -13,6 +14,7 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   const [handleInput, setHandleInput] = useState('');
   const [mnemonic, setMnemonic] = useState<string>('');
   const {setDeviceKey, setWallet, setProfile, profile} = useConsentStore();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -139,9 +141,15 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to EchoID</Text>
-      <Text style={styles.subtitle}>Secure consent management with cryptographic verification</Text>
+    <SafeAreaView style={[styles.container, {paddingTop: Math.max(insets.top, spacing.lg)}]} edges={['top', 'bottom']}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.title}>Welcome to EchoID</Text>
+          <Text style={styles.subtitle}>Secure consent management with cryptographic verification</Text>
+        </View>
 
       {step === 'device' && (
         <View style={styles.stepContainer}>
@@ -261,96 +269,142 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
           </TouchableOpacity>
         </View>
       )}
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: spacing.lg,
-    justifyContent: 'center',
     backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  welcomeContainer: {
+    marginBottom: spacing.xl,
+    paddingTop: spacing.md,
   },
   title: {
     ...typography.h1,
+    fontSize: 36,
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: spacing.sm,
     color: colors.text,
+    letterSpacing: -0.8,
   },
   subtitle: {
     ...typography.body,
+    fontSize: 17,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
+    lineHeight: 24,
+    paddingHorizontal: spacing.md,
   },
   stepContainer: {
     backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    ...shadows.md,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    ...Platform.select({
+      ios: {
+        ...shadows.md,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   stepTitle: {
     ...typography.h2,
+    fontSize: 26,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.md,
+    letterSpacing: -0.5,
   },
   stepDescription: {
     ...typography.body,
+    fontSize: 16,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    lineHeight: 24,
   },
   button: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md + 4,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    ...shadows.sm,
+    minHeight: 50,
+    ...Platform.select({
+      ios: {
+        ...shadows.sm,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
     ...typography.bodyBold,
+    fontSize: 17,
+    fontWeight: '600',
     color: colors.surface,
   },
   input: {
     ...typography.body,
-    borderWidth: 1,
+    fontSize: 16,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    padding: spacing.md + 4,
     marginBottom: spacing.md,
     backgroundColor: colors.surface,
     color: colors.text,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     marginTop: spacing.sm,
   },
   secondaryButtonText: {
     ...typography.bodyBold,
+    fontSize: 17,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   mnemonicContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    padding: spacing.md,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
     backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
   },
   mnemonicWord: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
     marginBottom: spacing.sm,
-    padding: spacing.sm,
+    padding: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
+    ...Platform.select({
+      ios: {
+        ...shadows.sm,
+      },
+    }),
   },
   mnemonicIndex: {
     ...typography.small,
@@ -365,11 +419,13 @@ const styles = StyleSheet.create({
   },
   warningText: {
     ...typography.caption,
+    fontSize: 14,
     color: colors.warning,
     textAlign: 'center',
-    marginBottom: spacing.md,
-    padding: spacing.sm,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
     backgroundColor: `${colors.warning}15`,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
+    lineHeight: 20,
   },
 });

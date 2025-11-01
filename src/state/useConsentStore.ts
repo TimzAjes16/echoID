@@ -50,7 +50,8 @@ export interface ChainConfig {
 }
 
 export interface UserProfile {
-  handle: string;
+  username: string; // Added username
+  handle?: string; // Optional EchoID handle
   qrPayload: string;
   ensName?: string;
 }
@@ -84,8 +85,8 @@ export const useConsentStore = create<ConsentStore>((set, get) => ({
   },
   consents: [],
   deviceKey: null,
-  selectedChain: 84532, // Base Sepolia default
-  protocolFeeWei: '50000000000000000', // 0.05 ETH
+  selectedChain: 42170, // Arbitrum Nova default (lower fees)
+  protocolFeeWei: '10000000000000000', // 0.01 ETH (lower fee)
   entitlements: {
     pro: false,
     skins: [],
