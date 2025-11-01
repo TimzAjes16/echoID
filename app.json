@@ -1,4 +1,79 @@
 {
-  "name": "EchoID",
-  "displayName": "EchoID"
+  "expo": {
+    "name": "EchoID",
+    "slug": "echoid",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#007AFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.echoid.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "EchoID needs camera access to capture selfies for consent verification.",
+        "NSMicrophoneUsageDescription": "EchoID needs microphone access to record voice for consent verification.",
+        "NSLocationWhenInUseUsageDescription": "EchoID needs location access to record geographic verification data for consent.",
+        "NSFaceIDUsageDescription": "EchoID uses FaceID to securely unlock your vault.",
+        "NSLocalNetworkUsageDescription": "EchoID uses local network to connect with WalletConnect."
+      },
+      "entitlements": {
+        "com.apple.developer.associated-domains": [
+          "applinks:echoid.app"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#007AFF"
+      },
+      "package": "com.echoid.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow EchoID to access your camera to capture selfies for consent verification."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow EchoID to access your microphone to record voice for consent verification."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow EchoID to access your location to record geographic verification data for consent."
+        }
+      ]
+    ],
+    "scheme": "echoid",
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
 }
