@@ -82,6 +82,9 @@ if (typeof global.TextDecoder === 'undefined') {
 
 import { AppRegistry } from 'react-native';
 import App from './App';
-import { name as appName } from './app.json';
+import appConfig from './app.json';
+
+// For Expo, the app name is in app.json.expo.name
+const appName = appConfig.expo?.name || 'EchoID';
 
 AppRegistry.registerComponent(appName, () => App);
