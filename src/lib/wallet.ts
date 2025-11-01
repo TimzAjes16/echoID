@@ -10,7 +10,7 @@ import {HDKey} from 'ethereum-cryptography/hdkey';
 import {getPublicKey} from 'ethereum-cryptography/secp256k1';
 import {keccak256} from 'ethereum-cryptography/keccak';
 import {bytesToHex} from 'ethereum-cryptography/utils';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const WALLET_STORAGE_KEY = 'echoid-wallet';
 
@@ -297,7 +297,7 @@ export async function importWalletFromMnemonic(mnemonicInput: string): Promise<{
  */
 async function storeWallet(walletData: WalletData): Promise<void> {
   try {
-    await EncryptedStorage.setItem(
+    await SecureStore.setItemAsync(
       WALLET_STORAGE_KEY,
       JSON.stringify({
         address: walletData.address,
@@ -315,7 +315,7 @@ async function storeWallet(walletData: WalletData): Promise<void> {
  */
 export async function getStoredWallet(): Promise<WalletData | null> {
   try {
-    const data = await EncryptedStorage.getItem(WALLET_STORAGE_KEY);
+    const data = await SecureStore.getItemAsync(WALLET_STORAGE_KEY);
     if (!data) return null;
     return JSON.parse(data);
   } catch (error) {
@@ -329,7 +329,7 @@ export async function getStoredWallet(): Promise<WalletData | null> {
  */
 export async function deleteWallet(): Promise<void> {
   try {
-    await EncryptedStorage.removeItem(WALLET_STORAGE_KEY);
+    await SecureStore.deleteItemAsync(WALLET_STORAGE_KEY);
   } catch (error) {
     console.error('Failed to delete wallet:', error);
   }

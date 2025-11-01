@@ -1,9 +1,10 @@
 /**
  * Test Mode Configuration
  * Allows running the app with test data when contracts aren't deployed
+ * Uses expo-secure-store for Expo Go compatibility
  */
 
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const TEST_MODE_KEY = 'echoid-test-mode';
 
@@ -11,7 +12,7 @@ const TEST_MODE_KEY = 'echoid-test-mode';
  * Enable or disable test mode
  */
 export async function setTestMode(enabled: boolean): Promise<void> {
-  await EncryptedStorage.setItem(TEST_MODE_KEY, JSON.stringify(enabled));
+  await SecureStore.setItemAsync(TEST_MODE_KEY, JSON.stringify(enabled));
 }
 
 /**
@@ -19,7 +20,7 @@ export async function setTestMode(enabled: boolean): Promise<void> {
  */
 export async function isTestMode(): Promise<boolean> {
   try {
-    const value = await EncryptedStorage.getItem(TEST_MODE_KEY);
+    const value = await SecureStore.getItemAsync(TEST_MODE_KEY);
     if (value === null) {
       // Default to test mode if not set (for development)
       return true;
