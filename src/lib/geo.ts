@@ -1,4 +1,4 @@
-import Geolocation from 'react-native-geolocation-service';
+import * as Location from 'expo-location';
 import {sha3_256} from 'js-sha3';
 
 export interface LocationData {
@@ -17,33 +17,36 @@ export interface GeoHash {
 
 /**
  * Get current location and return hashed geo data
+ * Uses expo-location for Expo Go compatibility
  */
 export async function getLocationHash(): Promise<GeoHash> {
-  return new Promise((resolve, reject) => {
-    Geolocation.getCurrentPosition(
-      position => {
-        const {latitude, longitude, timestamp} = position.coords;
-        const timestampMs = timestamp || Date.now();
+  try {
+    // Request location permissions
+    const {status} = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Location permission not granted');
+    }
 
-        // Hash coordinates + timestamp
-        const geoString = `${latitude.toFixed(6)},${longitude.toFixed(6)},${timestampMs}`;
-        const hash = sha3_256(geoString);
+    // Get current position
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+      maximumAge: 10000,
+    });
 
-        resolve({
-          hash,
-          lat: latitude,
-          lon: longitude,
-          timestamp: timestampMs,
-        });
-      },
-      error => {
-        reject(new Error(`Location error: ${error.message}`));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 10000,
-      },
-    );
-  });
+    const {latitude, longitude} = position.coords;
+    const timestampMs = position.timestamp || Date.now();
+
+    // Hash coordinates + timestamp
+    const geoString = `${latitude.toFixed(6)},${longitude.toFixed(6)},${timestampMs}`;
+    const hash = sha3_256(geoString);
+
+    return {
+      hash,
+      lat: latitude,
+      lon: longitude,
+      timestamp: timestampMs,
+    };
+  } catch (error: any) {
+    throw new Error(`Location error: ${error?.message || 'Failed to get location'}`);
+  }
 }
