@@ -4,7 +4,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import * as Keychain from 'react-native-keychain';
+import * as SecureStore from 'expo-secure-store';
 
 import {Auth} from './src/screens/Auth';
 import {Onboarding} from './src/screens/Onboarding';
@@ -90,7 +90,7 @@ function App() {
             });
 
             // Check if onboarding is complete
-            const deviceKey = await Keychain.getGenericPassword({service: 'echoid-device'});
+            const deviceKey = await SecureStore.getItemAsync('device-key-echoid-device');
             setIsOnboarding(!deviceKey);
           } else {
             setIsAuthenticated(false);

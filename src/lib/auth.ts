@@ -3,7 +3,9 @@
  * Stores username, wallet address, and handles signup/login
  */
 
-import EncryptedStorage from 'react-native-encrypted-storage';
+// Expo-compatible version - use auth-expo.ts instead
+// This file is kept for backwards compatibility but redirects to expo version
+export * from './auth-expo';
 import {createWallet} from './wallet';
 import {generateDeviceKey} from '../crypto';
 

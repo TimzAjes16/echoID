@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
-import * as Keychain from 'react-native-keychain';
+import * as SecureStore from 'expo-secure-store';
 import {useConsentStore} from '../state/useConsentStore';
 import {BadgeCard} from '../components/BadgeCard';
 import {FlashList} from '@shopify/flash-list';
@@ -50,19 +50,15 @@ export const Vault: React.FC<{
   const initializeVault = async () => {
     try {
       // Store vault unlock key with biometric protection
-      await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
-        service: 'echoid-vault',
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      await SecureStore.setItemAsync('vault-key-echoid-vault', 'vault-unlocked', {
+        requireAuthentication: true,
+        authenticationPrompt: 'Unlock vault with FaceID',
       });
     } catch (error: any) {
       console.error('Failed to initialize vault with biometric:', error);
       // If biometric is not available, store without access control
       try {
-        await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
-          service: 'echoid-vault',
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        });
+        await SecureStore.setItemAsync('vault-key-echoid-vault', 'vault-unlocked');
       } catch (fallbackError) {
         console.error('Failed to initialize vault:', fallbackError);
       }
@@ -72,13 +68,9 @@ export const Vault: React.FC<{
   const unlockVault = async () => {
     try {
       // Attempt to retrieve with biometric prompt
-      const credentials = await Keychain.getGenericPassword({
-        service: 'echoid-vault',
-        authenticationPrompt: {
-          title: 'Unlock Vault',
-          subtitle: 'Use FaceID to access your consent vault',
-          description: 'Authenticate to view your consents',
-        },
+      const credentials = await SecureStore.getItemAsync('vault-key-echoid-vault', {
+        requireAuthentication: true,
+        authenticationPrompt: 'Unlock vault with FaceID',
       });
 
       if (credentials) {

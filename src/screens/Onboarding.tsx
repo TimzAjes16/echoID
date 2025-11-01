@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
-import * as Keychain from 'react-native-keychain';
+import * as SecureStore from 'expo-secure-store';
 import {useConsentStore} from '../state/useConsentStore';
 import {generateDeviceKey} from '../crypto';
 import {connectWallet} from '../lib/walletconnect';
@@ -23,13 +23,13 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   const checkOnboardingStatus = async () => {
     // Check if device key and wallet already exist (from signup)
     try {
-      const deviceKey = await Keychain.getGenericPassword({service: 'echoid-device'});
+      const deviceKey = await SecureStore.getItemAsync('device-key-echoid-device');
       const {getStoredWallet} = await import('../lib/wallet');
       const wallet = await getStoredWallet();
       
       if (deviceKey && wallet) {
         // Both device key and wallet exist from signup, skip to biometric setup
-        setDeviceKey({publicKey: deviceKey.password, label: 'echoid-device'});
+        setDeviceKey({publicKey: deviceKey, label: 'echoid-device'});
         setWallet({
           address: wallet.address,
           chainId: '84532', // Default
@@ -55,9 +55,7 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
     try {
       const keyPair = await generateDeviceKey('echoid-device');
       setDeviceKey(keyPair);
-      await Keychain.setGenericPassword('device-key', keyPair.publicKey, {
-        service: 'echoid-device',
-      });
+      await SecureStore.setItemAsync('device-key-echoid-device', keyPair.publicKey);
       setStep('wallet');
     } catch (error) {
       Alert.alert('Error', 'Failed to generate device key');
@@ -114,16 +112,13 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
     // Set up FaceID for vault access
     try {
       // Initialize vault with biometric protection
-      await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
-        service: 'echoid-vault',
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      await SecureStore.setItemAsync('vault-key-echoid-vault', 'vault-unlocked', {
+        requireAuthentication: true,
+        authenticationPrompt: 'Unlock vault with FaceID',
       });
       
       // Also store biometric enabled flag
-      await Keychain.setGenericPassword('biometric-enabled', 'true', {
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      });
+      await SecureStore.setItemAsync('biometric-enabled', 'true');
       
       // Skip handle step if already set, otherwise go to handle creation
       if (profile?.handle) {
@@ -135,10 +130,7 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
       // If biometric is not available or user cancels, store without access control
       if (error.message?.includes('BiometryNotAvailable')) {
         Alert.alert('FaceID Not Available', 'FaceID is not available on this device. Vault will be accessible without biometric protection.');
-        await Keychain.setGenericPassword('vault-key', 'vault-unlocked', {
-          service: 'echoid-vault',
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        });
+        await SecureStore.setItemAsync('vault-key-echoid-vault', 'vault-unlocked');
         if (profile?.handle) {
           onComplete();
         } else {

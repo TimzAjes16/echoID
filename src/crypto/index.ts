@@ -1,8 +1,6 @@
-import {NativeModules, Platform} from 'react-native';
-import {sha3_256} from 'js-sha3';
-import EncryptedStorage from 'react-native-encrypted-storage';
-
-const {SecureEnclaveModule} = NativeModules;
+// Expo-compatible version - use expo-index.ts instead
+// This file is kept for backwards compatibility but redirects to expo version
+export * from './expo-index';
 
 // Check if module is available
 if (!SecureEnclaveModule) {
