@@ -31,61 +31,87 @@ if (typeof global.URL === 'undefined' || (global.URL.prototype && typeof global.
         console.log('✅ whatwg-url (function) polyfill loaded');
       }
     } catch (error2) {
-    // Fallback: create simple URL polyfill
-    global.URL = class URL {
-      constructor(url, base) {
-        let fullUrl = String(url);
-        
-        if (base) {
-          const baseStr = typeof base === 'string' ? base : base.href || '';
-          if (!fullUrl.match(/^[a-z]+:/i)) {
-            if (fullUrl.startsWith('/')) {
-              const match = baseStr.match(/^([^:]+:\/\/[^\/]+)/);
-              fullUrl = match ? match[1] + fullUrl : fullUrl;
-            } else {
-              const dir = baseStr.substring(0, baseStr.lastIndexOf('/') + 1);
-              fullUrl = dir + fullUrl;
+      // Final fallback: create simple URL polyfill that definitely works
+      console.warn('⚠️ URL polyfill libraries not available, using custom implementation');
+      
+      // Ensure protocol property exists and is accessible
+      global.URL = class URL {
+        constructor(url, base) {
+          let fullUrl = String(url || '');
+          
+          // Resolve relative URLs against base
+          if (base) {
+            const baseStr = typeof base === 'string' ? base : (base.href || String(base));
+            if (!fullUrl.match(/^[a-z][a-z0-9+.-]*:/i)) {
+              if (fullUrl.startsWith('/')) {
+                const match = baseStr.match(/^([^:]+:\/\/[^\/]+)/);
+                fullUrl = match ? match[1] + fullUrl : fullUrl;
+              } else {
+                const dir = baseStr.substring(0, baseStr.lastIndexOf('/') + 1);
+                fullUrl = dir + fullUrl;
+              }
             }
           }
+          
+          this.href = fullUrl;
+          
+          // Extract protocol - CRITICAL: expo-av needs this
+          const protoMatch = fullUrl.match(/^([^:]+):/);
+          this.protocol = protoMatch ? protoMatch[1] + ':' : 'file:';
+          
+          // Parse other URL components
+          const urlMatch = fullUrl.match(/^([^:]+:\/\/)?([^\/?#]*)?([^?#]*)?(\?[^#]*)?(#.*)?$/);
+          this.host = (urlMatch && urlMatch[2]) || '';
+          this.hostname = this.host.split(':')[0] || '';
+          this.port = this.host.includes(':') ? this.host.split(':')[1] : '';
+          this.pathname = (urlMatch && urlMatch[3]) || '/';
+          this.search = (urlMatch && urlMatch[4]) || '';
+          this.hash = (urlMatch && urlMatch[5]) || '';
+          this.origin = this.protocol + '//' + this.host;
         }
         
-        this.href = fullUrl;
-        const protocolMatch = fullUrl.match(/^([^:]+):/);
-        this.protocol = protocolMatch ? protocolMatch[1] + ':' : 'file:';
-        
-        const match = fullUrl.match(/^([^:]+:\/\/)?([^\/?#]*)?([^?#]*)?(\?[^#]*)?(#.*)?$/);
-        this.host = (match && match[2]) || '';
-        this.hostname = this.host.split(':')[0];
-        this.port = this.host.includes(':') ? this.host.split(':')[1] : '';
-        this.pathname = (match && match[3]) || '/';
-        this.search = (match && match[4]) || '';
-        this.hash = (match && match[5]) || '';
-        this.origin = this.protocol + '//' + this.host;
-      }
-      toString() { return this.href; }
-    };
-    
-    if (typeof global.URLSearchParams === 'undefined') {
-      global.URLSearchParams = class URLSearchParams {
-        constructor(init) {
-          this._params = {};
-          if (typeof init === 'string') {
-            init.split('&').forEach(p => {
-              const [k, v] = p.split('=');
-              if (k) this._params[decodeURIComponent(k)] = decodeURIComponent(v || '');
-            });
-          }
-        }
-        get(name) { return this._params[name] || null; }
-        set(name, value) { this._params[name] = value; }
         toString() {
-          return Object.entries(this._params)
-            .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-            .join('&');
+          return this.href;
         }
       };
+      
+      // Ensure URLSearchParams exists
+      if (typeof global.URLSearchParams === 'undefined') {
+        global.URLSearchParams = class URLSearchParams {
+          constructor(init) {
+            this._params = {};
+            if (typeof init === 'string') {
+              init.split('&').forEach(pair => {
+                const [key, val] = pair.split('=');
+                if (key) {
+                  this._params[decodeURIComponent(key)] = decodeURIComponent(val || '');
+                }
+              });
+            }
+          }
+          get(name) { return this._params[name] || null; }
+          set(name, value) { this._params[name] = value; }
+          toString() {
+            return Object.entries(this._params)
+              .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+              .join('&');
+          }
+        };
+      }
+      
+      console.log('✅ Custom URL polyfill installed with protocol support');
     }
-    console.log('✅ Simple URL polyfill installed');
+  }
+  
+  // Verify URL.protocol exists
+  try {
+    const testUrl = new global.URL('file:///test');
+    if (!testUrl.protocol) {
+      throw new Error('URL.protocol not accessible');
+    }
+    console.log('✅ URL.protocol verified:', testUrl.protocol);
+  } catch (verifyError) {
+    console.error('❌ URL polyfill verification failed:', verifyError);
   }
 }
 
