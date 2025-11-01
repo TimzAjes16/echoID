@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import {colors, spacing, typography, borderRadius, shadows} from '../lib/design';
