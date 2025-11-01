@@ -149,7 +149,7 @@ export async function encryptBytes(
   const crypto = require('expo-crypto');
   const iv = crypto.getRandomBytes(12);
   // Note: expo-crypto doesn't have AES-GCM directly
-  // For MVP, we'll store encrypted data using react-native-encrypted-storage
+  // For MVP, we'll store encrypted data using expo-secure-store
   // For actual file encryption, use a proper AES-GCM implementation
   throw new Error('AES-GCM encryption not yet implemented - use encrypted storage wrapper');
 }
