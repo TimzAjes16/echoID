@@ -1,13 +1,6 @@
-import {createWalletClient, custom, encodeFunctionData, parseAbi} from 'viem';
-import {baseSepolia, arbitrumNova, polygonZkEvm} from 'viem/chains';
+import {encodeFunctionData, parseAbi} from 'viem';
 import {sendTransaction, signTypedData} from '../lib/walletconnect';
-
-// Chain configs
-const CHAINS = {
-  84532: baseSepolia, // Base Sepolia
-  42170: arbitrumNova,
-  1442: polygonZkEvm,
-};
+import {isTestMode, simulateTxConfirmation, generateTestTxHash} from '../lib/testMode';
 
 // ABI for EchoID Factory contract (simplified - adapt from actual contracts)
 const FACTORY_ABI = parseAbi([
@@ -20,7 +13,19 @@ const FACTORY_ABI = parseAbi([
   'event ConsentCreated(uint256 indexed consentId, address indexed participantA, address indexed participantB)',
 ]);
 
+// Factory contract address - get from config
+const getFactoryAddress = () => {
+  try {
+    const {getConfig} = require('../lib/config');
+    const config = getConfig();
+    return config.factoryAddress || '0x0000000000000000000000000000000000000000';
+  } catch {
+    return '0x0000000000000000000000000000000000000000';
+  }
+};
+
 const FACTORY_ADDRESS = '0x...'; // Replace with actual Factory address
+const TEST_FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000'; // Test mode address
 
 /**
  * Create a new consent by calling Factory.createConsent (payable with protocol fee)
