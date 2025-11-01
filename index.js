@@ -15,7 +15,7 @@ if (typeof global !== 'undefined' && !global.crypto) {
 // Set up the polyfill FIRST (before trying native module)
 // This ensures crypto.getRandomValues exists even if native module fails
 if (typeof global !== 'undefined' && (!global.crypto.getRandomValues)) {
-  global.crypto.getRandomValues = function(arr: any) {
+  global.crypto.getRandomValues = function(arr) {
     if (!arr || arr.length === 0) {
       return arr;
     }
