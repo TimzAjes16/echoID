@@ -69,20 +69,30 @@ function App() {
 
   const initializeApp = async () => {
     try {
+      console.log('🚀 Initializing app...');
+      
       // Fetch remote config
-      const config = await fetchConfig();
-      setProtocolFee(config.protocolFeeWei);
-      setSelectedChain(config.defaultChainId);
+      try {
+        const config = await fetchConfig();
+        console.log('✅ Config loaded');
+        setProtocolFee(config.protocolFeeWei);
+        setSelectedChain(config.defaultChainId);
+      } catch (configError) {
+        console.warn('⚠️ Config fetch failed, using defaults:', configError);
+        // Continue with defaults
+      }
 
       // Check authentication
       try {
         const loggedIn = await isLoggedIn();
+        console.log('✅ Auth check complete, loggedIn:', loggedIn);
         setIsAuthenticated(loggedIn);
 
         if (loggedIn) {
           // Load user data
           const user = await getCurrentUser();
           if (user) {
+            console.log('✅ User loaded:', user.username);
             setWallet({address: user.walletAddress, connected: true});
             setProfile({
               username: user.username,
@@ -90,24 +100,33 @@ function App() {
             });
 
             // Check if onboarding is complete
-            const deviceKey = await SecureStore.getItemAsync('device-key-echoid-device');
-            setIsOnboarding(!deviceKey);
+            try {
+              const deviceKey = await SecureStore.getItemAsync('device-key-echoid-device');
+              setIsOnboarding(!deviceKey);
+              console.log('✅ Onboarding check complete, isOnboarding:', !deviceKey);
+            } catch (deviceKeyError) {
+              console.warn('⚠️ Device key check failed:', deviceKeyError);
+              setIsOnboarding(true);
+            }
           } else {
+            console.log('⚠️ User not found, showing onboarding');
             setIsAuthenticated(false);
             setIsOnboarding(true);
           }
         } else {
+          console.log('✅ Not logged in, showing auth screen');
           setIsAuthenticated(false);
           setIsOnboarding(false);
         }
       } catch (authError) {
         // If auth check fails, assume not authenticated
-        console.warn('Auth check failed:', authError);
+        console.warn('⚠️ Auth check failed:', authError);
         setIsAuthenticated(false);
         setIsOnboarding(false);
       }
     } catch (error) {
-      console.error('App initialization error:', error);
+      console.error('❌ App initialization error:', error);
+      // Always set states to prevent infinite loading
       setIsAuthenticated(false);
       setIsOnboarding(false);
     }
