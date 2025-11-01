@@ -71,9 +71,6 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   const handleConnectWallet = async () => {
     setLoading(true);
     try {
-      // Import WalletConnectModal dynamically
-      const {WalletConnectModal} = await import('../components/WalletConnectModal');
-      
       // We need to manually trigger the connection and show QR
       // WalletConnect's connect() returns a promise that resolves with {uri, approval}
       // We'll handle this manually to show the QR code
@@ -196,7 +193,16 @@ export const Onboarding: React.FC<{onComplete: () => void}> = ({onComplete}) => 
   };
 
   return (
-    <SafeAreaView style={[styles.container, {paddingTop: Math.max(insets.top, spacing.lg)}]} edges={['top', 'bottom']}>
+    <>
+      <WalletConnectModal
+        visible={showWCModal}
+        uri={walletConnectUri}
+        onClose={() => {
+          setShowWCModal(false);
+          setWalletConnectUri(null);
+        }}
+      />
+      <SafeAreaView style={[styles.container, {paddingTop: Math.max(insets.top, spacing.lg)}]} edges={['top', 'bottom']}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
