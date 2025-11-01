@@ -11,9 +11,11 @@ import {extractAudioFeatures, analyzeCoercion} from '../lib/coercion';
 import {createConsent} from '../sdk';
 import {getConfig, weiToFiat} from '../lib/config';
 import {uploadToIPFS} from '../lib/ipfs';
+import {requestApplePayPayment} from '../lib/applePay';
 import {v4 as uuidv4} from 'uuid';
 import RNFS from 'react-native-fs';
 import dayjs from 'dayjs';
+import {Platform} from 'react-native';
 
 type WizardStep =
   | 'price'
@@ -373,15 +375,64 @@ export const NewConsentWizard: React.FC<{onComplete: () => void}> = ({onComplete
 
       {step === 'fee-confirmation' && (
         <View style={styles.step}>
-          <Text style={styles.stepTitle}>Confirm Fee</Text>
+          <Text style={styles.stepTitle}>Pay Fee & Fund Wallet</Text>
           <View style={styles.feeCard}>
-            <Text style={styles.feeLabel}>Protocol Fee</Text>
-            <Text style={styles.feeAmount}>{weiToFiat(protocolFeeWei)} USD</Text>
-            <Text style={styles.feeSubtext}>Plus gas fees</Text>
+            <Text style={styles.feeLabel}>Total Required</Text>
+            <Text style={styles.feeAmount}>
+              ${(parseFloat(weiToFiat(protocolFeeWei)) + 0.15).toFixed(2)} USD
+            </Text>
+            <Text style={styles.feeSubtext}>
+              Protocol fee: {weiToFiat(protocolFeeWei)} USD + Gas: ~$0.15
+            </Text>
           </View>
+          
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.applePayButton, loading && styles.buttonDisabled]}
+              onPress={async () => {
+                try {
+                  setLoading(true);
+                  const totalAmount = (parseFloat(weiToFiat(protocolFeeWei)) + 0.15).toFixed(2);
+                  await requestApplePayPayment(
+                    'EchoID Consent Creation',
+                    totalAmount,
+                    'USD',
+                  );
+                  setPaymentMethod('applepay');
+                  Alert.alert(
+                    'Payment Successful',
+                    `Your wallet has been funded with $${totalAmount}. Proceeding to create consent...`,
+                  );
+                  // Proceed to review step
+                  setStep('review');
+                } catch (error: any) {
+                  Alert.alert('Payment Failed', error.message || 'Apple Pay payment failed');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}>
+              <Text style={styles.applePayButtonText}>🍎 Pay with Apple Pay</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={[styles.walletButton, loading && styles.buttonDisabled]}
+            onPress={() => {
+              setPaymentMethod('wallet');
+              Alert.alert(
+                'Using Wallet',
+                'The fee will be deducted from your connected wallet when creating the consent.',
+              );
+              setStep('review');
+            }}
+            disabled={loading}>
+            <Text style={styles.walletButtonText}>💳 Use Connected Wallet</Text>
+          </TouchableOpacity>
+          
           <Text style={styles.note}>
-            By proceeding, you acknowledge that a protocol fee of {weiToFiat(protocolFeeWei)} USD
-            will be paid to the EchoID treasury.
+            Apple Pay will fund your wallet for network fees and the protocol fee. The wallet option
+            uses your connected wallet directly.
           </Text>
         </View>
       )}

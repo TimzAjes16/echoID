@@ -14,7 +14,7 @@ class SecureEnclaveModule: NSObject, RCTBridgeModule {
   
   @objc(generateKeyPair:resolver:rejecter:)
   func generateKeyPair(_ label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    let workItem = DispatchWorkItem {
+    DispatchQueue.global(qos: .userInitiated).async {
       do {
         // Generate P-256 key in Secure Enclave
         let accessControl = SecAccessControlCreateWithFlags(
@@ -58,14 +58,13 @@ class SecureEnclaveModule: NSObject, RCTBridgeModule {
         rejecter("KEYGEN_ERROR", error.localizedDescription, error)
       }
     }
-    DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
   }
   
   // MARK: - Signing
   
   @objc(sign:withLabel:resolver:rejecter:)
   func sign(_ dataBase64: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    let workItem = DispatchWorkItem {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let data = Data(base64Encoded: dataBase64) else {
         rejecter("INVALID_INPUT", "Invalid base64 data", nil)
         return
@@ -102,14 +101,13 @@ class SecureEnclaveModule: NSObject, RCTBridgeModule {
       
       resolver(signature.base64EncodedString())
     }
-    DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
   }
   
   // MARK: - Key Wrapping (ECDH + AES-GCM)
   
   @objc(wrapKey:recipientPubKey:withLabel:resolver:rejecter:)
   func wrapKey(_ symKeyBase64: String, recipientPubKey: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    let workItem = DispatchWorkItem {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let symKeyData = Data(base64Encoded: symKeyBase64) else {
         rejecter("INVALID_INPUT", "Invalid symmetric key", nil)
         return
@@ -174,14 +172,13 @@ class SecureEnclaveModule: NSObject, RCTBridgeModule {
         "tag": sealedBox.tag.base64EncodedString(),
       ])
     }
-    DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
   }
   
   // MARK: - Key Unwrapping
   
   @objc(unwrapKey:nonce:tag:senderPubKey:withLabel:resolver:rejecter:)
   func unwrapKey(_ ciphertextBase64: String, nonce: String, tag: String, senderPubKey: String, withLabel label: String, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-    let workItem = DispatchWorkItem {
+    DispatchQueue.global(qos: .userInitiated).async {
       guard let ciphertext = Data(base64Encoded: ciphertextBase64),
             let nonceData = Data(base64Encoded: nonce),
             let tagData = Data(base64Encoded: tag),
@@ -247,7 +244,6 @@ class SecureEnclaveModule: NSObject, RCTBridgeModule {
         rejecter("DECRYPT_ERROR", "Failed to decrypt: \(error.localizedDescription)", error)
       }
     }
-    DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
   }
   
   // MARK: - Module Export
