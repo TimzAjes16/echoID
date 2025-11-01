@@ -13,7 +13,7 @@ import {getConfig, weiToFiat} from '../lib/config';
 import {uploadToIPFS} from '../lib/ipfs';
 import {requestApplePayPayment} from '../lib/applePay';
 import {v4 as uuidv4} from 'uuid';
-import RNFS from 'react-native-fs';
+import * as FileSystem from 'expo-file-system';
 import dayjs from 'dayjs';
 import {Platform} from 'react-native';
 
@@ -123,7 +123,9 @@ export const NewConsentWizard: React.FC<{onComplete: () => void}> = ({onComplete
       // Read audio file and hash (with fallback)
       let audioBytes: Buffer;
       try {
-        const base64 = await RNFS.readFile(audioPath, 'base64');
+        const base64 = await FileSystem.readAsStringAsync(audioPath, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         audioBytes = Buffer.from(base64, 'base64');
       } catch (error) {
         console.warn('Failed to read audio file, using test data:', error);
@@ -139,7 +141,9 @@ export const NewConsentWizard: React.FC<{onComplete: () => void}> = ({onComplete
       try {
         // TODO: In production, extract face embedding from selfie image
         // For MVP, generate hash from selfie file
-        const selfieBase64 = await RNFS.readFile(selfiePath, 'base64');
+        const selfieBase64 = await FileSystem.readAsStringAsync(selfiePath, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         const selfieBytes = Buffer.from(selfieBase64, 'base64');
         faceHash = hashFaceEmbedding(Array.from(selfieBytes.slice(0, 128))); // Use first 128 bytes as embedding
       } catch (error) {
@@ -182,7 +186,9 @@ export const NewConsentWizard: React.FC<{onComplete: () => void}> = ({onComplete
       const attachmentCids: string[] = [];
       if (selfiePath) {
         try {
-          const selfieBytes = await RNFS.readFile(selfiePath, 'base64').then((base64) =>
+          const selfieBytes = await FileSystem.readAsStringAsync(selfiePath, {
+            encoding: FileSystem.EncodingType.Base64,
+          }).then((base64) =>
             Buffer.from(base64, 'base64'),
           );
           const cid = await uploadToIPFS(new Uint8Array(selfieBytes));
